@@ -61,7 +61,42 @@ namespace TestApiJWT.Services
                 Username = user.UserName
             };
 
+            var jwtSecureToken = await CreateJwtToken(user);
+
+            return new AuthModel
+            {
+                Email = user.Email,
+                ExpiresOn = jwtSecureToken.ValidTo,
+                IsAuthenticated = true,
+                Roles = new List<string> { "User"},
+                Token = new JwtSecurityTokenHandler().WriteToken(jwtSecureToken),
+                Username = user.UserName
+            };
         }
+
+        public async Task<AuthModel> GetTokenAsync(TokenRequestModel model)
+        {
+            var authModel = new AuthModel();
+
+            var user  = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
+            {
+                authModel.Message = "Email Or Password Is Incorrect";
+                return authModel;
+            }
+            authModel.IsAuthenticated = true;
+            //authModel.Token = new JwtSecurityTokenHandler().WriteToken(jwtSecureToken);
+            authModel.Email = user.Email;
+            authModel.Username = user.UserName;
+            //authModel.ExpiresOn = jwtSecureToken.validTo;
+
+            var RolesList  = await _userManager.GetRolesAsync(user);
+            authModel.Roles = RolesList.ToList();
+
+            return authModel;
+        }
+
         private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user)
         {
             var userClaims = await _userManager.GetClaimsAsync(user);
